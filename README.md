@@ -4,7 +4,7 @@
 More information about the SF2000 handheld gaming system can be found [here](https://vonmillhausen.github.io/sf2000/).
 
 ## About this modification
-This version enables the game's built-in SRAM save, it also stores SRAM and savestates on the same directory of the rom instead of a save directory, to avoid conflict when you have multiple roms with the same file name for different cores, if you are upgrading from previous versions, you must move your saves manually.
+This version enables the game's built-in SRAM save, it also stores SRAM and savestates on the same directory of the rom instead of a save directory, to avoid conflict when you have multiple roms with the same file name for different cores, if you are upgrading from previous versions, you must move your saves manually, you must also rename the ram extension to srm.
 
 It also creates a new stub format that doesn't rely on the stub name, which allows you to rename the stub files independently of the rom name, and you don't need the core name taking almost half of the space available for the game name on the screen, the old stub format is still supported.
 
