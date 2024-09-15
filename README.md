@@ -8,7 +8,7 @@ This version enables the game's built-in SRAM save, it also stores SRAM and save
 
 It also creates a new stub format that doesn't rely on the stub name, which allows you to rename the stub files independently of the rom name, and you don't need the core name taking almost half of the space available for the game name on the screen, the old stub format is still supported.
 
-Since the space for storing the loader is very limited, I had to sacrifice the stub loader's logging, I guess nobody will miss that.
+Since the space for storing the loader is very limited, I had to sacrifice the stub loader's logging.
 
 To distinguish between a GBA rom and a stub, this version of multicore uses the case of the extension, if the extension is .gBa (case sensitive) it's a stub, if not it is a GBA rom (or a legacy stub)
 
