@@ -104,6 +104,75 @@ void build_rom_filepath(
 	if(p) *p = 0;
 	snprintf(filepath, size, "%s.%s", temp, extension);
 }
+#ifdef DBLCHERRY_SAVE
+void save_srm(const char slot){
+	int count = retro_dblchry_emulated_count();
+	for(int i = 0; i < count; i++){
+		save_srm_id(slot, i);
+	}
+}
+void save_srm_id(const char slot, int position){
+	char ram_filepath[MAXPATH];
+	char ext[9];
+	if(position == 0){
+		snprintf(ext, 5, "srm%c", slot);
+	}else{
+		if(slot == 0){
+			snprintf(ext, 9, "srm_%d", position + 1);
+		}else{
+			snprintf(ext, 9, "srm_%d_%c", position + 1, slot);
+		}
+	}
+	build_rom_filepath(ram_filepath, sizeof(ram_filepath), s_game_filepath, ext, 8);
+	size_t save_size = retro_dblchry_get_sram_size(position);
+	if(save_size == 0)
+		return;
+	FILE *ram_file = fopen(ram_filepath, "wb");
+	if (!ram_file)
+		return;
+	fwrite(retro_dblchry_get_sram_ptr(position), save_size, 1, ram_file);
+	fclose(ram_file);
+	fs_sync(ram_filepath);
+}
+void load_srm(const char slot){
+	int count = retro_dblchry_emulated_count();
+	for(int i = 0; i < count; i++){
+		load_srm_id(slot, i);
+	}
+}
+void load_srm_id(const char slot, int position){
+	size_t save_size = retro_dblchry_get_sram_size(position);
+	char ram_filepath[MAXPATH];
+	char ext[9];
+	if(position == 0){
+		snprintf(ext, 5, "srm%c", slot);
+	}else{
+		if(slot == 0){
+			snprintf(ext, 9, "srm_%d", position + 1);
+		}else{
+			snprintf(ext, 9, "srm_%d_%c", position + 1, slot);
+		}
+	}
+	build_rom_filepath(ram_filepath, sizeof(ram_filepath), s_game_filepath, ext, 8);
+	FILE *ram_file = fopen(ram_filepath, "rb");
+	if (!ram_file)
+		return;
+	fseeko(ram_file, 0, SEEK_END);
+	size_t ram_file_size = ftell(ram_file);
+	fseeko(ram_file, 0, SEEK_SET);
+	if(ram_file_size < save_size){
+		save_size = ram_file_size;
+	}
+	if(save_size == 0){
+		fclose(ram_file);
+		return;
+	}
+	fread(retro_dblchry_get_sram_ptr(position), 1, save_size, ram_file);
+	fclose(ram_file);
+}
+#endif
+
+#ifndef DBLCHERRY_SAVE
 void save_srm(const char slot){
 	char ram_filepath[MAXPATH];
 	char ext[5];
@@ -141,6 +210,7 @@ void load_srm(const char slot){
 	fread(retro_get_memory_data(RETRO_MEMORY_SAVE_RAM), 1, save_size, ram_file);
 	fclose(ram_file);
 }
+#endif
 void wrap_retro_unload_game(void){
 	save_srm(0);
 	retro_unload_game();

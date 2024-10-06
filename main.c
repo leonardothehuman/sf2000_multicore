@@ -66,7 +66,11 @@ void load_and_run_core(const char *file_path, int load_state)
 	if (!parse_filename(file_path, &corename, &filename)) {
 		char* dot = strrchr(file_path, '.');
 		bool isStub = false;
-		if(*(dot + 1) == 'g' && *(dot + 2) == 'B' && *(dot + 3) == 'a') {
+		if(
+			(*(dot + 1) == 'g' || *(dot + 1) == 'G') &&
+			(*(dot + 2) == 'b' || *(dot + 2) == 'B') &&
+			(*(dot + 3) == 'a' || *(dot + 3) == 'A')
+		) {
 			char *fileContent = malloc(MAXPATH);
 			*fileContent = '/';
 			FILE *fp = fopen(file_path, "rb");
@@ -74,10 +78,12 @@ void load_and_run_core(const char *file_path, int load_state)
 				lcd_bsod("\n COULD NOT\n OPEN STUB\n FILE :-(\n ");
 			}
 			size_t bytesRead = fw_fread(fileContent+1, 1, MAXPATH - 3, fp);
-			fileContent[bytesRead+1] = '.';
-			fileContent[bytesRead+2] = 0;
+			if(bytesRead < MAXPATH - 3){
+				fileContent[bytesRead+1] = '.';
+				fileContent[bytesRead+2] = 0;
+				isStub = parse_filename(fileContent, &corename, &filename);
+			}
 			fclose(fp);
-			isStub = parse_filename(fileContent, &corename, &filename);
 			free(fileContent);
 		}
 		if(!isStub){

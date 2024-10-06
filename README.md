@@ -10,7 +10,7 @@ It also creates a new stub format that doesn't rely on the stub name, which allo
 
 Since the space for storing the loader is very limited, I had to sacrifice the stub loader's logging.
 
-To distinguish between a GBA rom and a stub, this version of multicore uses the case of the extension, if the extension is .gBa (case sensitive) it's a stub, if not it is a GBA rom (or a legacy stub)
+To distinguish between a GBA rom and a stub, this version of multicore uses the size of the file, files with up to 251 bytes are stubs, bigger files are roms
 
 ## Status
 Some cores build and work well, others build and have issues (no sound, slowness, etc.), some build but do not currently work, and others do not build at all. For current information on the state of each core, please see the [spreadsheet](https://docs.google.com/spreadsheets/d/1BDPqLwRcY2cN7tObuyW7RzLw8oGyY9XGLS1D4jLgz2Q/edit?usp=sharing).
@@ -24,10 +24,10 @@ Multicore with save feature enabled can be found here: https://github.com/leonar
 - choose a directory to contain all this
 - decide if you want EVERYTHING (there are a lot of cores!)
     - YES, I want ALL the cores!
-        - `git clone --recurse-submodules --shallow-submodules https://github.com/madcock/sf2000_multicore`
+        - `git clone --recurse-submodules --shallow-submodules https://github.com/leonardothehuman/sf2000_multicore.git`
         - wait for a long while
     - NO, I want to select individual cores
-        - `git clone https://github.com/madcock/sf2000_multicore`
+        - `git clone https://github.com/leonardothehuman/sf2000_multicore.git`
         - `cd sf2000_multicore/libs/libretro-common`
         - `git submodule update --init .`
         - `cd ../..`
