@@ -1,9 +1,12 @@
+"use strict";
+
 const fs = require('fs');
 const fsp = fs.promises;
 const readline = require('readline');
 const path = require('path');
 const SingleLine = Symbol();
 const Doubleline = Symbol();
+const { Jimp } = require("jimp");
 
 let spinnerIndex = 0;
 function updateSpinner(){
@@ -112,7 +115,7 @@ function splitText(text, extra = 6){
         let singleWord = isSingleWord(text.slice(numberPrefixLen, text.length));
 
         while(firstCharIdx < text.length){
-            finalIndex = firstCharIdx + maxTextSize;
+            let finalIndex = firstCharIdx + maxTextSize;
             let ignoreNumber = false;
             let ignoreLimit = 13 - numberPrefixLen + whiteSpaceLen; 
             if(ignoreLimit < 8){ignoreLimit = 8;}
@@ -565,6 +568,14 @@ function gropuOptions(options, colCount=5, extra = 6){
     return options;
 }
 
+function parseM3u(m3uContent){
+    try {
+        let content = m3uContent.split('\n').map(line => line.trim());
+        return content;
+    } catch (error) {
+        return [];
+    }
+}
 function parseCue(cueContent){
     try {
         let content = cueContent
@@ -738,8 +749,23 @@ async function extensionSelector(title, additionalLines, core){
 }
 
 async function stubFilesList(destination){
+    let zfbStubs = (await fsp.readdir(destination, {withFileTypes: true}))
+        .filter(file => file.isFile())
+        .map(file => file.name)
+        .filter(file => path.extname(file).slice(1).toLowerCase() == 'zfb')
+        .filter(file => {
+            try {
+                let content = fs.readFileSync(`${destination}/${file}`);
+                let targetName = content.toString('utf8', (144*208*2) + 4, content.length - 2);
+                return  path.extname(targetName).slice(1).toLowerCase() == 'gba' &&
+                        path.basename(targetName, path.extname(targetName)).split(';').length == 2
+            } catch (error) {
+                return false;
+            }
+        });
+
     if(legacyMode == true){
-        return (await fsp.readdir(destination, {withFileTypes: true}))
+        let otherStubs = (await fsp.readdir(destination, {withFileTypes: true}))
             .filter(file => file.isFile())
             .map(file => file.name)
             .filter(
@@ -747,19 +773,33 @@ async function stubFilesList(destination){
                     path.extname(file).slice(1).toLowerCase() == 'gba' &&
                     path.basename(file, path.extname(file)).split(';').length == 2
             );
+        return [...zfbStubs, ...otherStubs];
     }
-    return (await fsp.readdir(destination, {withFileTypes: true}))
+    let otherStubs = (await fsp.readdir(destination, {withFileTypes: true}))
         .filter(file => file.isFile())
+        .filter(file => fs.statSync(`${destination}/${file.name}`).size <= 251)
         .map(file => file.name)
-        .filter(file => path.extname(file).slice(1) == 'gBa')
+        .filter(file => path.extname(file).toLowerCase().slice(1) == 'gba')
+
+    return [...zfbStubs, ...otherStubs];
 }
 
 async function parseStubFile(file){
     let content;
-    if(legacyMode == true){
-        content = path.basename(file, path.extname(file)).split(';');
+    let isZfb = path.extname(file).slice(1).toLowerCase() == 'zfb';
+    if(isZfb){
+        let buffer = fs.readFileSync(`${file}`);
+        let _content = buffer.toString('utf8', (144*208*2) + 4, buffer.length - 2);
+        if(path.extname(_content).slice(1).toLowerCase() != 'gba'){
+            return undefined;
+        }
+        content = path.basename(_content, path.extname(_content)).split(';');
     }else{
-        content = (await fsp.readFile(file, 'utf8')).split(';');
+        if(legacyMode == true){
+            content = path.basename(file, path.extname(file)).split(';');
+        }else{
+            content = (await fsp.readFile(file, 'utf8')).split(';');
+        }
     }
     if(content.length != 2) return undefined;
     return {
@@ -775,6 +815,34 @@ async function romsList(core, ext){
         .filter(file => ext.includes(path.extname(file).slice(1).toLowerCase()));
 }
 
+function checkForFile(file, receive){
+    if(fs.existsSync(file)){
+        receive.current = file;
+    }
+}
+
+function arduinoMap(x, in_min, in_max, out_min, out_max) {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+async function createZfbStub(thumbnailFileName, core, romFileName, destination){
+    const image = await Jimp.read(thumbnailFileName);
+    image.resize({ w: 144, h: 208 });
+    if(image.bitmap.data.length < 144*208*4){
+        console.log('WARNING: LENGTH IS NOT 144*208*4, FALLBACK TO STUB WITHOUT THUMBNAIL');
+        return false;
+    }
+    let out = Buffer.alloc(144*208*2);
+    for(let i = 0; i < (144*208); i++){
+        let r = arduinoMap(image.bitmap.data.readUint8((i*4)), 0, 255, 0, 31);
+        let g = arduinoMap(image.bitmap.data.readUint8((i*4) + 1), 0, 255, 0, 63);
+        let b = arduinoMap(image.bitmap.data.readUint8((i*4) + 2), 0, 255, 0, 31);
+        out.writeUInt16LE((r << 11) | (g << 5) | b, i * 2);
+    }
+    let rom = `${core};${romFileName}.gba`;
+    out = Buffer.concat([out, Buffer.alloc(4, 0), Buffer.from(rom, 'utf8'), Buffer.alloc(2, 0)]);
+    await fsp.writeFile(destination, out);
+    return true;
+}
 async function createStub(){
     let title = 'CREATE OR UPDATE STUBS' + (legacyMode ? ' [LEGACY MODE]' : '');
     let selectedCore = await coreSelector(title);
@@ -819,12 +887,23 @@ async function createStub(){
     }
     
     let created = false;
+
+    let m3uFiles = [];
+    if(fs.existsSync(`./ROMS/${core}`) && (await fsp.stat(`./ROMS/${core}`)).isDirectory()){
+        m3uFiles = await romsList(core, ['m3u']);
+    }
+    let inM3u = [];
+    for(let i = 0; i < m3uFiles.length; i++){
+        let content = parseM3u(await fsp.readFile(`./ROMS/${core}/${m3uFiles[i]}`, 'utf8'));
+        content.forEach(file => inM3u.push(file));
+        updateSpinner();
+    }
+    files = files.filter(file => !inM3u.includes(file));
     
     let cueFiles = [];
     if(fs.existsSync(`./ROMS/${core}`) && (await fsp.stat(`./ROMS/${core}`)).isDirectory()){
         cueFiles = await romsList(core, ['cue']);
     }
-    
     let inCue = [];
     for(let i = 0; i < cueFiles.length; i++){
         let content = parseCue(await fsp.readFile(`./ROMS/${core}/${cueFiles[i]}`, 'utf8'));
@@ -845,6 +924,37 @@ async function createStub(){
             continue;
         }
         console.log(`Creating stub: ${core};${files[i]}`);
+        if(destination.toLowerCase() != 'roms'){
+            let thumbnail = {
+                current: null
+            };
+            let _fileWoExt = path.basename(files[i], path.extname(files[i]));
+            let fileWoExt = _fileWoExt;
+            checkForFile(`./ROMS/${core}/${fileWoExt}.jpg`, thumbnail);
+            checkForFile(`./ROMS/${core}/${fileWoExt}.jpeg`, thumbnail);
+            checkForFile(`./ROMS/${core}/${fileWoExt}.jpe`, thumbnail);
+            checkForFile(`./ROMS/${core}/${fileWoExt}.png`, thumbnail);
+            checkForFile(`./ROMS/${core}/${fileWoExt}.bmp`, thumbnail);
+            if(thumbnail.current != null){
+                if(fs.existsSync(`./${destination}/${fileWoExt}.zfb`)){
+                    fileWoExt = `${_fileWoExt}[${core}]`;
+                }
+                let counter = 2;
+                while(fs.existsSync(`./${destination}/${fileWoExt}.zfb`)){
+                    fileWoExt = `${_fileWoExt}[${core}] (${counter})`;
+                    counter++;
+                }
+                let r = await createZfbStub(
+                    thumbnail.current,
+                    core, files[i],
+                    `./${destination}/${fileWoExt}.zfb`
+                );
+                if(r == true){
+                    created = true;
+                    continue;
+                }
+            }
+        }
         if(legacyMode == true){
             fsp.writeFile(`./${destination}/${core};${files[i]}.gba`, "");
             created = true;
@@ -852,15 +962,15 @@ async function createStub(){
         }
         let _fileWoExt = path.basename(files[i], path.extname(files[i]));
         let fileWoExt = _fileWoExt;
-        if(fs.existsSync(`./${destination}/${fileWoExt}.gBa`)){
+        if(fs.existsSync(`./${destination}/${fileWoExt}.gba`)){
             fileWoExt = `${_fileWoExt}[${core}]`;
         }
         let counter = 2;
-        while(fs.existsSync(`./${destination}/${fileWoExt}.gBa`)){
+        while(fs.existsSync(`./${destination}/${fileWoExt}.gba`)){
             fileWoExt = `${_fileWoExt}[${core}] (${counter})`;
             counter++;
         }
-        await fsp.writeFile(`./${destination}/${fileWoExt}.gBa`, `${core};${files[i]}`);
+        await fsp.writeFile(`./${destination}/${fileWoExt}.gba`, `${core};${files[i]}`);
         created = true;
     }
 
@@ -921,12 +1031,19 @@ async function deleteStub(){
                     cueContent.forEach(file => toAdd.push(file));
                 }
             } catch (error) {}
+            try {
+                let m3uFiles = await romsList(stubContent.core, ['m3u']);
+                for(let i = 0; i < m3uFiles.length; i++){
+                    let m3uContent = parseM3u(await fsp.readFile(`./ROMS/${stubContent.core}/${m3uFiles[i]}`, 'utf8'));
+                    m3uContent.forEach(file => toAdd.push(file));
+                }
+            } catch (error) {}
             coreCueds[stubContent.core] = toAdd;
             updateSpinner();
         }
         // console.log(coreCueds);
         if(coreCueds[stubContent.core].includes(stubContent.rom)){
-            console.log(`Deleting stub in cue: ${stubContent.core};${stubContent.rom}`);
+            console.log(`Deleting stub in cue or m3u: ${stubContent.core};${stubContent.rom}`);
             await fsp.unlink(currentFile);
             deleted = true;
             continue;

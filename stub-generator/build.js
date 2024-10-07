@@ -164,6 +164,15 @@ async function firstFunction(){
         });
     }
 
+    // console.log('Bundling sharp-wasm32 blob ...');
+    // const sharpWasmBinary = fs.readFileSync(`./node_modules/@img/sharp-wasm32/lib/sharp-wasm32.node.wasm`);
+    // const sharpWasmContent = sharpWasmBinary.toString('base64');
+    // let script = 'module.exports = Buffer.from(\'' + sharpWasmContent + '\', \'base64\');';
+    // fs.writeFileSync('./temp/sharp-wasm32.node.wasm.js', script, 'utf8');
+
+    console.log('Packing modules ...');
+    execSync('npx rollup --config rollup.config.mjs', {stdio: 'inherit'});
+
     if(!fs.existsSync('./tools/upx/upx.exe')){
         if(!fs.existsSync('./tools/upx.zip')){
             console.log('Downloading upx ...');
@@ -221,6 +230,7 @@ async function firstFunction(){
 
     console.log('Copying binary ...');
     await copyStream('./temp/node.exe', './stub-generator.exe');
+    await copyStream('./temp/bundle.js', './stub-generator.js');
 
     console.log('Removing temporary files ...');
     tempFiles = fs.readdirSync('./temp');

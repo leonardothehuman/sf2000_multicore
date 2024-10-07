@@ -2,7 +2,16 @@
   "name": "stub-generator",
   "version": "1.0.0",
   "description": "Generate stub files for sf2000 multicore",
-  "main": "index.js",
+  "source": "index.js",
+  "main": "temp/bundle.js",
+  "targets": {
+    "main": {
+      "context": "node",
+      "outputFormat": "commonjs",
+      "optimize": false,
+      "includeNodeModules": true
+    }
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
@@ -13,10 +22,18 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "hasha": "^5.2.2",
     "nodejs-file-downloader": "^4.13.0",
     "postject": "^1.0.0-alpha.6",
     "rimraf": "^3.0.2",
+    "rollup": "^4.24.0",
     "yauzl": "^3.1.3"
+  },
+  "dependencies": {
+    "jimp": "^1.6.0"
   }
 }
