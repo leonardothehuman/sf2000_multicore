@@ -1,5 +1,8 @@
 # SF2000 Multicore
 
+## About this branch
+This branch exists with the only porpuse of having the battery save and the stub loader on the last release from the original project, because some cores (Picodrive) may have new problems (no sound) that did not exists in this version.
+
 ## About the platform
 More information about the SF2000 handheld gaming system can be found [here](https://vonmillhausen.github.io/sf2000/).
 

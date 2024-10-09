@@ -14,7 +14,7 @@ make CONSOLE=col        CORE=cores/Gearcoleco/platforms/libretro && \
 make CONSOLE=fcf        CORE=cores/FreeChaF && \
 make CONSOLE=retro8     CORE=cores/retro8 && \
 make CONSOLE=vapor      CORE=cores/vaporspec/machine MAKEFILE=-fMakefile.libretro && \
-#make CONSOLE=2048       CORE=cores/libretro-2048 MAKEFILE=-fMakefile.libretro && \
+make CONSOLE=2048       CORE=cores/libretro-2048 MAKEFILE=-fMakefile.libretro && \
 make CONSOLE=gong       CORE=cores/gong MAKEFILE=-fMakefile.libretro && \
 make CONSOLE=outrun     CORE=cores/cannonball && \
 make CONSOLE=wolf3d     CORE=cores/ecwolf/src/libretro && \
@@ -47,7 +47,7 @@ make CONSOLE=wsv        CORE=cores/potator/platform/libretro && \
 make CONSOLE=amstrad    CORE=cores/libretro-crocods && \
 make CONSOLE=arduboy    CORE=cores/arduous && \
 make CONSOLE=lnxb       CORE=cores/libretro-beetle-lynx && \
-#make CONSOLE=bk         CORE=cores/bk-emulator MAKEFILE=-fMakefile.libretro && \
+make CONSOLE=bk         CORE=cores/bk-emulator MAKEFILE=-fMakefile.libretro && \
 make clean CONSOLE=c64sc   CORE=cores/libretro-vice EMUTYPE=x64sc && \
 make CONSOLE=c64sc         CORE=cores/libretro-vice EMUTYPE=x64sc && \
 make clean CONSOLE=c64sc   CORE=cores/libretro-vice EMUTYPE=x64sc && \
@@ -65,7 +65,7 @@ make CONSOLE=vic20         CORE=cores/libretro-vice EMUTYPE=xvic && \
 make clean CONSOLE=vic20   CORE=cores/libretro-vice EMUTYPE=xvic && \
 make CONSOLE=fake08     CORE=cores/fake-08/platform/libretro && \
 make CONSOLE=lowres-nx  CORE=cores/lowres-nx/platform/LibRetro && \
-#make CONSOLE=mrboom     CORE=cores/libretro-mrboom && \
+make CONSOLE=mrboom     CORE=cores/libretro-mrboom && \
 make CONSOLE=jnb        CORE=cores/libretro-jumpnbump && \
 make CONSOLE=cavestory  CORE=cores/libretro-nxengine && \
 #make CONSOLE=x48        CORE=cores/libretro-x48 && \
@@ -93,11 +93,11 @@ make CONSOLE=testwav CORE=cores/libretro-samples/audio/audio_playback_wav && \
 
 #deprecated working
 #
-#make CONSOLE=tennis     CORE=cores/retro-tennis && \
+make CONSOLE=tennis     CORE=cores/retro-tennis && \
 #
 
 
-make updatelogo ALPHARELEASE=0.10
+#make updatelogo ALPHARELEASE=0.10
 
 
 true
